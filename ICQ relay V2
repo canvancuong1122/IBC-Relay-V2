@@ -1,0 +1,105 @@
+https://github.com/kj89/icq_stride
+
+cd $HOME && mkdir .icq
+
+sudo tee $HOME/.icq/config.yaml > /dev/null <<EOF
+default_chain: icq-stride
+chains:
+  icq-gaia:
+    key: w3_Gaia
+    chain-id: GAIA
+    rpc-addr: http://127.0.0.1:23657       
+    grpc-addr: http://127.0.0.1:23090     
+    account-prefix: cosmos
+    keyring-backend: test
+    gas-adjustment: 1.2
+    gas-prices: 0.001uatom
+    key-directory: /root/.icq/keys
+    debug: false
+    timeout: 20s
+    block-timeout: ""
+    output-format: json
+    sign-mode: direct
+  icq-stride:
+    key: w3_donw
+    chain-id: STRIDE-TESTNET-2
+    rpc-addr: http://127.0.0.1:16657      
+    grpc-addr: http://127.0.0.1:16090     
+    account-prefix: stride
+    keyring-backend: test
+    gas-adjustment: 1.2
+    gas-prices: 0.001ustrd
+    key-directory: /root/.icq/keys
+    debug: false
+    timeout: 20s
+    block-timeout: ""
+    output-format: json
+    sign-mode: direct
+cl: {}
+EOF
+
+
+============= Wallet
+
+icq keys restore --chain icq-stride w3_donw
+icq keys restore --chain icq-gaia w3_Gaia
+
+root@vmi926635:~# icq keys restore --chain icq-stride w3_donw
+Enter mnemonic 🔑: 24 phrases
+
+stride1hv89gd6ch8d85hu2kdd5yt5ps53ssn2f2ud3ml
+root@vmi926635:~# icq keys restore --chain icq-gaia w3_Gaia
+Enter mnemonic 🔑: 24 phrases
+
+cosmos1zsem5ayfe662ta9n0478quml0lx9k2hm45fd7r
+root@vmi926635:~#
+
+
+
+
+
+============== Create systemd service
+sudo tee /etc/systemd/system/icqd.service > /dev/null <<EOF
+[Unit]
+Description=Interchain Query Service
+After=network-online.target
+
+[Service]
+User=$USER
+ExecStart=$(which icq) run --debug
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable icqd
+sudo systemctl restart icqd
+
+sudo systemctl stop icqd
+
+sudo systemctl status icqd
+journalctl -u icqd -f -o cat
+
+================= Start
+
+root@vmi926635:~# sudo systemctl restart icqd
+root@vmi926635:~# journalctl -u icqd -f -o cat
+Started Interchain Query Service.
+^C
+root@vmi926635:~# sudo systemctl status icqd
+● icqd.service - Interchain Query Service
+     Loaded: loaded (/etc/systemd/system/icqd.service; enabled; vendor preset: enabled)
+     Active: active (running) since Thu 2022-08-11 18:23:27 CEST; 36s ago
+   Main PID: 503788 (icq)
+      Tasks: 8 (limit: 9479)
+     Memory: 10.3M
+     CGroup: /system.slice/icqd.service
+             └─503788 /usr/local/bin/icq run --debug
+
+Aug 11 18:23:27 vmi926635.contaboserver.net systemd[1]: Started Interchain Query Service.
+root@vmi926635:~#
+
